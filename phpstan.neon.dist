@@ -1,0 +1,7 @@
+parameters:
+	level: 5
+	paths:
+		- src
+		- tests
+	bootstrapFiles:
+		- vendor/roots/wordpress-no-content/wp-includes/plugin.php
