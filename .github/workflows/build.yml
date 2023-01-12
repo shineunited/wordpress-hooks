@@ -14,8 +14,8 @@ jobs:
             fail-fast: false
             matrix:
                 php: ["8.0", "8.1"]
-                flags: ["--no-interaction", "--no-interaction --prefer-lowest"]
-        name: PHP ${{ matrix.php }} Unit Test
+                ver: ["Latest", "Lowest"]
+        name: PHP ${{ matrix.php }} ${{ matrix.ver }} Unit Test
         steps:
             - name: Checkout Code
               uses: actions/checkout@v3
@@ -23,8 +23,12 @@ jobs:
               uses: shivammathur/setup-php@v2
               with:
                   php-version: ${{ matrix.php }}
-            - name: Install Dependencies
-              run: composer update ${{ matrix.flags }}
+            - if: ${{ matrix.ver == 'Latest' }}
+            - name: Install Dependencies (Latest)
+              run: composer update --no-interaction
+            - if: ${{ matrix.ver == 'Lowest' }}
+              name: Install Dependencies (Lowest)
+              run: composer update --no-interaction --prefer-lowest
             - name: Run Script
               run: composer phpunit
 
