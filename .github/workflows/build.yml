@@ -25,7 +25,7 @@ jobs:
                   php-version: ${{ matrix.php }}
             - name: Install Dependencies
               run: composer install --no-interaction
-            - if: ${{ matrix.ver != 'Latest' }}
+            - if: ${{ matrix.wordpress != 'Latest' }}
               name: Force WordPress Version
               run: composer require roots/wordpress-no-content:${{ matrix.wordpress }}.* --no-interaction
             - name: Run Script
