@@ -24,7 +24,7 @@ jobs:
               with:
                   php-version: ${{ matrix.php }}
             - if: ${{ matrix.ver == 'Latest' }}
-            - name: Install Dependencies (Latest)
+              name: Install Dependencies (Latest)
               run: composer update --no-interaction
             - if: ${{ matrix.ver == 'Lowest' }}
               name: Install Dependencies (Lowest)
