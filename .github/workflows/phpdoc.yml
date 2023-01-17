@@ -1,4 +1,4 @@
-name: Build Docs
+name: Generate Docs
 on:
     workflow_dispatch
 
@@ -33,7 +33,7 @@ jobs:
                   curl --silent --location "https://phpdoc.org/phpDocumentor.phar" > "phpDocumentor.phar"
                   chmod a+x "phpDocumentor.phar"
             - name: Generate Docs
-              run: php "phpDocumentor.phar" --directory="." --target=".phpdoc/build" --cache=".phpdoc/cache"
+              run: php "phpDocumentor.phar" --directory="." --target=".phpdoc/build" --cache-folder=".phpdoc/cache"
             - name: Upload Artifact
               uses: actions/upload-pages-artifact@v1
               with:
