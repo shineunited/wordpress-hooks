@@ -15,11 +15,194 @@ namespace ShineUnited\WordPress\Hooks;
 
 use Closure;
 use Error;
+use ReflectionAttribute;
+use ReflectionClass;
+use ReflectionFunction;
+use ReflectionMethod;
+use ReflectionObject;
 
 /**
  * WordPress Hook Manager
  */
 class HookManager {
+	public const REGISTER_CALLBACK = 1;
+	public const REGISTER_OBJECT = 2;
+	public const REGISTER_CLASS = 4;
+	public const REGISTER_STATIC = 8;
+	public const REGISTER_ALL = 15;
+
+	public const DEFAULT_PRIORITY = 10;
+	public const DEFAULT_ACCEPTED_ARGS = 1;
+
+	private static array $registeredCallbacks = [];
+	private static array $registeredObjects = [];
+	private static array $registeredClasses = [];
+
+	/**
+	 * Register a hook or set of hooks with WordPress. Automatically registers any callable,
+	 * class or object according to $mode. May attempt to register multiple ways if applicable.
+	 *
+	 * Special Cases:
+	 *   + Closures are callables and objects. By default register as callbacks only.
+	 *   + Objects with the '__invoke' function are both callables and objects. Will register __invoke
+	 *     function as a callback, and the object separately.
+	 *   + Objects with static functions have their instance context functions registered
+	 *     and their static functions registered as well if REGISTER_STATIC is set.
+	 *
+	 * @param callable|string|object $target Target to register.
+	 * @param integer                $mode   Registration mode.
+	 *
+	 * @return void
+	 */
+	public static function register(callable|string|object $target, int $mode = self::REGISTER_ALL): void {
+		if (($mode & self::REGISTER_CALLBACK) && is_callable($target)) {
+			static::registerCallback($target);
+		}
+
+		if (($mode & self::REGISTER_OBJECT) && is_object($target) && !$target instanceof Closure) {
+			static::registerObject($target, ($mode & self::REGISTER_STATIC) == true);
+		}
+
+		if (($mode & self::REGISTER_CLASS) && is_string($target) && class_exists($target, true)) {
+			static::registerClass($target);
+		}
+	}
+
+	/**
+	 * Registers hooks for a callback with WordPress.
+	 *
+	 * Will only register callables with Hook attributes.
+	 *
+	 * @param callable $callback The callback to register.
+	 *
+	 * @return void
+	 */
+	public static function registerCallback(callable $callback): void {
+		// generate de-duplication signature
+		$signature = static::getCallbackSignature($callback);
+
+		if (isset(self::$registeredCallbacks[$signature])) {
+			// callback already registered
+			return;
+		} else {
+			// mark as registered
+			self::$registeredCallbacks[$signature] = true;
+		}
+
+		$hooks = static::getCallbackHookAttributes($callback);
+		foreach ($hooks as $hook) {
+			$hook->register($callback);
+		}
+	}
+
+	/**
+	 * Registers hooks for an object with WordPress.
+	 *
+	 * Will only register publically accessible methods with relevant attributes.
+	 *
+	 * @param object  $object        Object to register.
+	 * @param boolean $includeStatic Optional. If false static methods will not be registered.
+	 *
+	 * @return void
+	 */
+	public static function registerObject(object $object, bool $includeStatic = true): void {
+		// registers hooks for an object
+
+		if ($object instanceof Closure) {
+			// Closure objects need to be registered as callables
+
+			return;
+		}
+
+		// generate de-duplication signature
+		$signature = static::getObjectSignature($object);
+
+		if (isset(self::$registeredObjects[$signature])) {
+			// object already registered
+			return;
+		} else {
+			// mark as registered
+			self::$registeredObjects[$signature] = true;
+		}
+
+		$reflector = new ReflectionObject($object);
+		foreach ($reflector->getMethods() as $method) {
+			if ($method->isStatic()) {
+				// method is static, skip
+				continue;
+			}
+
+			if (!$method->isPublic()) {
+				// method is non-public, skip
+				continue;
+			}
+
+			if ($method->getName() == '__invoke') {
+				// skip __invoke method
+				continue;
+			}
+
+			$callback = [$object, $method->getName()];
+			static::registerCallback($callback);
+			//$hooks = static::getCallbackHookAttributes($callback);
+			//foreach($hooks as $hook) {
+			//	$hook->register($callback);
+			//}
+		}
+
+		if ($includeStatic) {
+			static::registerClass($object::class);
+		}
+	}
+
+	/**
+	 * Registers hooks for a class with WordPress.
+	 *
+	 * Will only register publically accessible static methods with Hook attributes.
+	 *
+	 * @param string $classname The full classname.
+	 *
+	 * @return void
+	 */
+	public static function registerClass(string $classname): void {
+		if (!class_exists($classname, true)) {
+			// invalid classname
+			return;
+		}
+
+		// generate de-duplication signature
+		$signature = static::getClassSignature($classname);
+
+		if (isset(self::$registeredClasses[$signature])) {
+			// classname already registered
+			return;
+		} else {
+			// mark as registered
+			self::$registeredClasses[$signature] = true;
+		}
+
+		$reflector = new ReflectionClass($classname);
+		foreach ($reflector->getMethods() as $method) {
+			if (!$method->isStatic()) {
+				// method is non-static, skip
+				continue;
+			}
+
+			if (!$method->isPublic()) {
+				// method is non-public, skip
+				continue;
+			}
+
+			$callback = [$classname, $method->getName()];
+			static::registerCallback($callback);
+			//$hooks = static::getCallbackHookAttributes([$classname, $method->getName()]);
+			//foreach($hooks as $hook) {
+			//	$hook->register($callback);
+			//}
+
+			// or should I just call registerCallback?
+		}
+	}
 
 	/**
 	 * Adds a callback function to a filter hook.
@@ -35,7 +218,19 @@ class HookManager {
 	 *
 	 * @return boolean Always returns true.
 	 */
-	public static function addFilter(string $hookName, callable|string|array $callback, int $priority = 10, int $acceptedArgs = 1): bool {
+	public static function addFilter(string $hookName, callable|string|array $callback, ?int $priority = null, ?int $acceptedArgs = null): bool {
+		if (is_null($priority)) {
+			$priority = self::DEFAULT_PRIORITY;
+		}
+
+		if (is_null($acceptedArgs)) {
+			if (is_callable($callback)) {
+				$acceptedArgs = static::getCallbackParameterCount($callback);
+			} else {
+				$acceptedArgs = self::DEFAULT_ACCEPTED_ARGS;
+			}
+		}
+
 		if (function_exists('add_filter')) {
 			// wordpress has been initialized, use add_filter instead
 			return add_filter($hookName, $callback, $priority, $acceptedArgs);
@@ -146,10 +341,10 @@ class HookManager {
 			return true;
 		}
 
-		$signature = static::generateCallbackSignature($callback);
+		$signature = static::getCallbackSignature($callback);
 		foreach ($GLOBALS['wp_filter'][$hookName] as $priority => $hooks) {
 			foreach ($hooks as $hook) {
-				if ($signature == static::generateCallbackSignature($hook['function'])) {
+				if ($signature == static::getCallbackSignature($hook['function'])) {
 					// callback matches existing callback
 					return $priority;
 				}
@@ -172,7 +367,7 @@ class HookManager {
 	 *
 	 * @return boolean Whether the function existed before it was removed.
 	 */
-	public static function removeFilter(string $hookName, callable|string|array $callback, int $priority = 10): bool {
+	public static function removeFilter(string $hookName, callable|string|array $callback, int $priority = self::DEFAULT_PRIORITY): bool {
 		if (function_exists('remove_filter')) {
 			// wordpress has been initialized, use remove_filter instead
 			return remove_filter($hookName, $callback, $priority);
@@ -193,11 +388,11 @@ class HookManager {
 			return false;
 		}
 
-		$signature = static::generateCallbackSignature($callback);
+		$signature = static::getCallbackSignature($callback);
 		$found = false;
 		$remaining = [];
 		foreach ($GLOBALS['wp_filter'][$hookName][$priority] as $hook) {
-			if ($found || $signature != static::generateCallbackSignature($hook['function'])) {
+			if ($found || $signature != static::getCallbackSignature($hook['function'])) {
 				$remaining[] = $hook;
 			} else {
 				$found = true;
@@ -304,7 +499,19 @@ class HookManager {
 	 *
 	 * @return boolean Always returns true.
 	 */
-	public static function addAction(string $hookName, callable|string|array $callback, int $priority = 10, int $acceptedArgs = 1): bool {
+	public static function addAction(string $hookName, callable|string|array $callback, ?int $priority = null, ?int $acceptedArgs = null): bool {
+		if (is_null($priority)) {
+			$priority = self::DEFAULT_PRIORITY;
+		}
+
+		if (is_null($acceptedArgs)) {
+			if (is_callable($callback)) {
+				$acceptedArgs = static::getCallbackParameterCount($callback);
+			} else {
+				$acceptedArgs = self::DEFAULT_ACCEPTED_ARGS;
+			}
+		}
+
 		if (function_exists('add_action')) {
 			// wordpress has been initialized, use add_action instead
 			return add_action($hookName, $callback, $priority, $acceptedArgs);
@@ -383,7 +590,7 @@ class HookManager {
 	 *
 	 * @return boolean Whether the function is removed.
 	 */
-	public static function removeAction(string $hookName, callable|string|array $callback, int $priority = 10): bool {
+	public static function removeAction(string $hookName, callable|string|array $callback, int $priority = self::DEFAULT_PRIORITY): bool {
 		if (function_exists('remove_action')) {
 			// wordpress has been initialized, use remove_action instead
 			return remove_action($hookName, $callback, $priority);
@@ -467,7 +674,7 @@ class HookManager {
 	 *
 	 * @return string The signature string.
 	 */
-	protected static function generateCallbackSignature(callable|string|array $callback): string {
+	protected static function getCallbackSignature(callable|string|array $callback): string {
 		if (is_string($callback)) {
 			return $callback;
 		}
@@ -481,12 +688,95 @@ class HookManager {
 		}
 
 		if (is_object($callback[0])) {
-			return spl_object_hash($callback[0]) . $callback[1];
+			return 'callback-' . spl_object_hash($callback[0]) . $callback[1];
 		} elseif (is_string($callback[0])) {
-			return $callback[0] . '::' . $callback[1];
+			return 'callback-' . $callback[0] . '::' . $callback[1];
 		}
 
 		// should be impossible, all possible conditions have been handled
-		return '';
+		return 'callback';
+	}
+
+	/**
+	 * Generate a signature for object matching.
+	 *
+	 * @param object $object The object to generate a signature for.
+	 *
+	 * @return string The signature string.
+	 */
+	protected static function getObjectSignature(object $object): string {
+		return 'object-' . spl_object_hash($object);
+	}
+
+	/**
+	 * Generate a signature for class matching.
+	 *
+	 * @param string $classname The classname to generate a signature for.
+	 *
+	 * @return string The signature string.
+	 */
+	protected static function getClassSignature(string $classname): string {
+		return 'class-' . $classname;
+	}
+
+	/**
+	 * Get Hooks for a callback.
+	 *
+	 * @param callable $callback The callback.
+	 *
+	 * @return Hook[] Array of callback hooks.
+	 */
+	protected static function getCallbackHookAttributes(callable $callback): iterable {
+		$reflector = false;
+		if (is_string($callback)) {
+			$reflector = new ReflectionFunction($callback);
+		} elseif (is_array($callback)) {
+			$reflector = new ReflectionMethod($callback[0], $callback[1]);
+		} elseif ($callback instanceof Closure) {
+			$reflector = new ReflectionFunction($callback);
+		} elseif (is_object($callback) && is_callable([$callback, '__invoke'])) {
+			$reflector = new ReflectionObject($callback);
+		} else {
+			// unknown/invalid callback type
+			return [];
+		}
+
+		$attributes = $reflector->getAttributes(Hook::class, ReflectionAttribute::IS_INSTANCEOF);
+		if (count($attributes) == 0) {
+			// no hook attributes defined
+			return [];
+		}
+
+		$hooks = [];
+		foreach ($attributes as $attribute) {
+			$hooks[] = $attribute->newInstance();
+		}
+
+		return $hooks;
+	}
+
+	/**
+	 * Get the parameter count for a callback.
+	 *
+	 * @param callable $callback The callback.
+	 *
+	 * @return integer The parameter count.
+	 */
+	protected static function getCallbackParameterCount(callable $callback): int {
+		$reflector = false;
+		if (is_string($callback)) {
+			$reflector = new ReflectionFunction($callback);
+		} elseif (is_array($callback)) {
+			$reflector = new ReflectionMethod($callback[0], $callback[1]);
+		} elseif ($callback instanceof Closure) {
+			$reflector = new ReflectionFunction($callback);
+		} elseif (is_object($callback) && is_callable([$callback, '__invoke'])) {
+			$reflector = new ReflectionMethod($callback, '__invoke');
+		} else {
+			// unknown/invalid callback type
+			return 0;
+		}
+
+		return $reflector->getNumberOfParameters();
 	}
 }
