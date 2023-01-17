@@ -12,6 +12,7 @@
 	<testsuites>
 		<testsuite name="WordPress Hooks Test Suite">
 			<directory>tests</directory>
+			<exclude>tests/HookManager/Register/inc</exclude>
 		</testsuite>
 	</testsuites>
 </phpunit>

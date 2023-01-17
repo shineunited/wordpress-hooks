@@ -15,4 +15,5 @@
 
 	<file>src/</file>
 	<file>tests/</file>
+	<exclude-pattern>/tests/HookManager/Register/inc/*</exclude-pattern>
 </ruleset>

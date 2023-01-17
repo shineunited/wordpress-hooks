@@ -3,5 +3,7 @@ parameters:
 	paths:
 		- src
 		- tests
+	excludePaths:
+		- tests/HookManager/Register/inc
 	bootstrapFiles:
 		- vendor/roots/wordpress-no-content/wp-includes/plugin.php
