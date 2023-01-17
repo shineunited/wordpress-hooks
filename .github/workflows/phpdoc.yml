@@ -1,0 +1,14 @@
+name: Build Docs
+on:
+    workflow_dispatch
+
+jobs:
+    phpdoc:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout Code
+              uses: actions/checkout@v3
+            - name: Update Wiki
+              uses: impresscms-dev/phpdocs-wiki-update-action@v2.2.5
+              with:
+                  engine: evert/phpdoc-md
