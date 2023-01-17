@@ -144,10 +144,6 @@ class HookManager {
 
 			$callback = [$object, $method->getName()];
 			static::registerCallback($callback);
-			//$hooks = static::getCallbackHookAttributes($callback);
-			//foreach($hooks as $hook) {
-			//	$hook->register($callback);
-			//}
 		}
 
 		if ($includeStatic) {
@@ -195,12 +191,6 @@ class HookManager {
 
 			$callback = [$classname, $method->getName()];
 			static::registerCallback($callback);
-			//$hooks = static::getCallbackHookAttributes([$classname, $method->getName()]);
-			//foreach($hooks as $hook) {
-			//	$hook->register($callback);
-			//}
-
-			// or should I just call registerCallback?
 		}
 	}
 
@@ -213,8 +203,8 @@ class HookManager {
 	 *                                            associated with a particular filter are executed.
 	 *                                            Lower numbers correspond with earlier execution,
 	 *                                            and functions with the same priority are executed
-	 *                                            in the order in which they were added to the filter. Default 10.
-	 * @param integer               $acceptedArgs Optional. The number of arguments the function accepts. Default 1.
+	 *                                            in the order in which they were added to the filter.
+	 * @param integer               $acceptedArgs Optional. The number of arguments the function accepts.
 	 *
 	 * @return boolean Always returns true.
 	 */
@@ -494,8 +484,8 @@ class HookManager {
 	 *                                            associated with a particular action are executed.
 	 *                                            Lower numbers correspond with earlier execution,
 	 *                                            and functions with the same priority are executed
-	 *                                            in the order in which they were added to the action. Default 10.
-	 * @param integer               $acceptedArgs Optional. The number of arguments the function accepts. Default 1.
+	 *                                            in the order in which they were added to the action.
+	 * @param integer               $acceptedArgs Optional. The number of arguments the function accepts.
 	 *
 	 * @return boolean Always returns true.
 	 */
