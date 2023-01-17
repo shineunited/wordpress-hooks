@@ -7,8 +7,6 @@
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
- *
- * @package ShineUnited\WordPress\Hooks
  */
 
 declare(strict_types=1);
@@ -44,12 +42,29 @@ class HookManager {
 	 * Register a hook or set of hooks with WordPress. Automatically registers any callable,
 	 * class or object according to $mode. May attempt to register multiple ways if applicable.
 	 *
+	 * Anything registerable with registerCallback, registerObject, or registerClass can be registered
+	 * using HookManager::register(), by default it will support all registration modes.
+	 *
+	 * Mode flags:
+	 *   + **HookManager::REGISTER_CALLBACK** If set and passed a callable, register hooks for all
+	 *     attached Hook attributes.
+	 *   + **HookManager::REGISTER_OBJECT** If set and passed an object, register all public methods
+	 *     with Hook attributes.
+	 *   + **HookManager::REGISTER_CLASS** If set and passed a valid classname, register all static
+	 *     methods with Hook attributes.
+	 *   + **HookManager::REGISTER_STATIC** If passed an object, also register the object's static
+	 *     class methods in addition to instance context methods.
+	 *
 	 * Special Cases:
-	 *   + Closures are callables and objects. By default register as callbacks only.
+	 *   + Closures are callables and objects. They can only be registered as callbacks.
 	 *   + Objects with the '__invoke' function are both callables and objects. Will register __invoke
 	 *     function as a callback, and the object separately.
 	 *   + Objects with static functions have their instance context functions registered
 	 *     and their static functions registered as well if REGISTER_STATIC is set.
+	 *
+	 * @see HookManager::registerCallback() For examples of callback hook attribute configuration.
+	 * @see HookManager::registerObject()   For examples of object hook attribute configuration.
+	 * @see HookManager::registerClass()    For examples of static class hook attribute configuration.
 	 *
 	 * @param callable|string|object $target Target to register.
 	 * @param integer                $mode   Registration mode.
@@ -74,6 +89,94 @@ class HookManager {
 	 * Registers hooks for a callback with WordPress.
 	 *
 	 * Will only register callables with Hook attributes.
+	 *
+	 * ##### Examples
+	 *
+	 * ###### Global Function Callback
+	 * With all callback types, multiple hooks can be applied.
+	 * ```php
+	 * use ShineUnited\WordPress\Hooks\Action;
+	 * use ShineUnited\WordPress\Hooks\Filter;
+	 * use ShineUnited\WordPress\Hooks\HookManager;
+	 *
+	 * #[Filter('example-filter-1', 5)]
+	 * #[Filter('example-filter-2')]
+	 * #[Action('example-action', 15)]
+	 * function global_callback($value) {
+	 *     // code
+	 * }
+	 *
+	 * HookManager::registerCallback('global_callback');
+	 * // add_filter('example-filter-1', 'global_callback', 5, 1);
+	 * // add_filter('example-filter-2', 'global_callback', 10, 1);
+	 * // add_action('example-action', 'global_callback', 15, 1);
+	 * ```
+	 *
+	 * ###### Closure Callback
+	 * ```php
+	 * use ShineUnited\WordPress\Hooks\Filter;
+	 * use ShineUnited\WordPress\Hooks\HookManager;
+	 *
+	 * $closure =
+	 *     #[Filter('example-filter', 5)]
+	 *     function($value) {
+	 *         // code
+	 *     }
+	 * ;
+	 *
+	 * HookManager::registerCallback($closure);
+	 * // add_filter('example-filter', $closure, 5, 1);
+	 * ```
+	 *
+	 * ###### Object Method Callback
+	 * ```php
+	 * use ShineUnited\WordPress\Hooks\Filter;
+	 * use ShineUnited\WordPress\Hooks\HookManager;
+	 *
+	 * class ObjectHooks {
+	 *     #[Filter('example-filter', 5)]
+	 *     public function callback($value, $opts) {
+	 *         // code
+	 *     }
+	 * }
+	 *
+	 * $hooks = new ObjectHooks();
+	 * HookManager::registerCallback([$hooks, 'callback']);
+	 * // add_filter('example-filter', [$hooks, 'callback'], 5, 2);
+	 * ```
+	 *
+	 * ###### Static Method Callback
+	 * ```php
+	 * use ShineUnited\WordPress\Hooks\Filter;
+	 * use ShineUnited\WordPress\Hooks\HookManager;
+	 *
+	 * class StaticHooks {
+	 *     #[Filter('example-filter', 5)]
+	 *     public static function callback($value, $opts) {
+	 *         // code
+	 *     }
+	 * }
+	 *
+	 * HookManager::registerCallback([StaticHooks::class, 'callback']);
+	 * // add_filter('example-filter', [StaticHooks::class, 'callback'], 5, 2);
+	 * ```
+	 *
+	 * ###### Invokable Object Callback
+	 * Note: for invokable objects the hook attributes must be applied to the class rather than the '__invoke' function.
+	 * ```php
+	 * use ShineUnited\WordPress\Hooks\Filter;
+	 * use ShineUnited\WordPress\Hooks\HookManager;
+	 *
+	 * #[Filter('example-filter', 5)]
+	 * class InvokableObject {
+	 *    public function __invoke($value, $opts, $flags) {
+	 *        // code
+	 *    }
+	 * }
+	 *
+	 * $callback = new InvokableObject();
+	 * HookManager::registerCallback($callback);
+	 * // add_filter('example-filter', $callback, 5, 2);
 	 *
 	 * @param callable $callback The callback to register.
 	 *
@@ -101,6 +204,62 @@ class HookManager {
 	 * Registers hooks for an object with WordPress.
 	 *
 	 * Will only register publically accessible methods with relevant attributes.
+	 *
+	 * ##### Examples
+	 *
+	 * ###### Multiple Callbacks
+	 * ```php
+	 * use ShineUnited\WordPress\Hooks\Filter;
+	 * use ShineUnited\WordPress\Hooks\HookManager;
+	 *
+	 * class MultipleCallbacksExample {
+	 *     #[Filter('lowercase')]
+	 *     public function lowercase($value) {
+	 *         return strtolower($value);
+	 *     }
+	 *
+	 *     #[Filter('uppercase')]
+	 *     public function uppercase($value) {
+	 *         return strtoupper($value);
+	 *     }
+	 * }
+	 *
+	 * $callbacks = new MultipleCallbacksExample();
+	 * HookManager::registerObject($callbacks);
+	 * // add_filter('lowercase', [$callbacks, 'lowercase'], 10, 1);
+	 * // add_filter('uppercase', [$callbacks, 'uppercase'], 10, 1);
+	 * ```
+	 *
+	 * ###### Static and Instance Callbacks
+	 * ```php
+	 * use ShineUnited\WordPress\Hooks\Action;
+	 * use ShineUnited\WordPress\Hooks\Filter;
+	 * use ShineUnited\WordPress\Hooks\HookManager;
+	 *
+	 * class MixedTypeExample {
+	 *     #[Filter('lowercase')]
+	 *     public function lowercase($value) {
+	 *         return strtolower($value);
+	 *     }
+	 *
+	 *     #[Filter('uppercase')]
+	 *     public function uppercase($value) {
+	 *         return strtoupper($value);
+	 *     }
+	 *
+	 *     #[Action('static-action', 15)
+	 *     public static function trigger() {
+	 *         // code
+	 *     }
+	 * }
+	 *
+	 * $callbacks = new MixedTypeExample();
+	 * HookManager::registerObject($callbacks, true);
+	 * // add_filter('lowercase', [$callbacks, 'lowercase'], 10, 1);
+	 * // add_filter('uppercase', [$callbacks, 'uppercase'], 10, 1);
+	 * // since $includeStatic is true, the static callback will also be registered
+	 * // add_action('static-action', [MixedTypeExample::class, 'trigger'], 15, 0);
+	 * ```
 	 *
 	 * @param object  $object        Object to register.
 	 * @param boolean $includeStatic Optional. If false static methods will not be registered.
@@ -157,6 +316,30 @@ class HookManager {
 	 * Registers hooks for a class with WordPress.
 	 *
 	 * Will only register publically accessible static methods with Hook attributes.
+	 *
+	 * ##### Examples
+	 *
+	 * ###### Multiple Callbacks
+	 * ```php
+	 * use ShineUnited\WordPress\Hooks\Filter;
+	 * use ShineUnited\WordPress\Hooks\HookManager;
+	 *
+	 * class StaticCallbacksExample {
+	 *     #[Filter('lowercase')]
+	 *     public static function lowercase($value) {
+	 *         return strtolower($value);
+	 *     }
+	 *
+	 *     #[Filter('uppercase')]
+	 *     public static function uppercase($value) {
+	 *         return strtoupper($value);
+	 *     }
+	 * }
+	 *
+	 * HookManager::registerClass(StaticCallbacksExample::class);
+	 * // add_filter('lowercase', [StaticCallbacksExample::class, 'lowercase'], 10, 1);
+	 * // add_filter('uppercase', [StaticCallbacksExample::class, 'uppercase'], 10, 1);
+	 * ```
 	 *
 	 * @param string $classname The full classname.
 	 *
