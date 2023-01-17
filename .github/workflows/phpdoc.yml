@@ -11,4 +11,6 @@ jobs:
             - name: Update Wiki
               uses: impresscms-dev/phpdocs-wiki-update-action@v2.2.5
               with:
-                  engine: evert/phpdoc-md
+                  engine: clean/phpdoc-md
+                  class_root_namespace: ShineUnited\\WordPress\\Hooks
+                  include: src/**
