@@ -12,5 +12,5 @@ jobs:
               uses: impresscms-dev/phpdocs-wiki-update-action@v2.2.5
               with:
                   engine: clean/phpdoc-md
-                  class_root_namespace: ShineUnited\\WordPress\\Hooks
-                  include: src/**
+                  class_root_namespace: ShineUnited\WordPress\Hooks
+                  include: ShineUnited\WordPress\Hooks\*
