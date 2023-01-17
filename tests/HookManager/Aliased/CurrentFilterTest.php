@@ -11,30 +11,29 @@
 
 declare(strict_types=1);
 
-namespace ShineUnited\WordPress\Hooks\Tests\HookManager;
+namespace ShineUnited\WordPress\Hooks\Tests\HookManager\Aliased;
 
 use ShineUnited\WordPress\Hooks\HookManager;
 use ShineUnited\WordPress\Hooks\UninitializedError;
 
 /**
- * Current Action Test
+ * Current Filter Test
  */
-class CurrentActionTest extends TestCase {
-	use Type\Action;
+class CurrentFilterTest extends TestCase {
 
 	/**
 	 * @return void
 	 */
 	public function testPassthru(): void {
-		$mock = $this->mockGlobalFunction('current_action');
+		$mock = $this->mockGlobalFunction('current_filter');
 
 		$mock
 			->expects($this->once())
-			->method('current_action')
+			->method('current_filter')
 			->willReturn('')
 		;
 
-		HookManager::currentAction();
+		HookManager::currentFilter();
 	}
 
 	/**
@@ -42,6 +41,6 @@ class CurrentActionTest extends TestCase {
 	 */
 	public function testUninitialized(): void {
 		$this->expectException(UninitializedError::class);
-		HookManager::currentAction();
+		HookManager::currentFilter();
 	}
 }

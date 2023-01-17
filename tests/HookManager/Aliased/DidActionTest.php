@@ -11,7 +11,7 @@
 
 declare(strict_types=1);
 
-namespace ShineUnited\WordPress\Hooks\Tests\HookManager;
+namespace ShineUnited\WordPress\Hooks\Tests\HookManager\Aliased;
 
 use ShineUnited\WordPress\Hooks\HookManager;
 use ShineUnited\WordPress\Hooks\UninitializedError;
@@ -20,7 +20,6 @@ use ShineUnited\WordPress\Hooks\UninitializedError;
  * Did Action Test
  */
 class DidActionTest extends TestCase {
-	use Type\Action;
 
 	/**
 	 * @return void

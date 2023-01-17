@@ -11,7 +11,7 @@
 
 declare(strict_types=1);
 
-namespace ShineUnited\WordPress\Hooks\Tests\HookManager;
+namespace ShineUnited\WordPress\Hooks\Tests\HookManager\Typed;
 
 use ShineUnited\WordPress\Hooks\HookManager;
 use Generator;

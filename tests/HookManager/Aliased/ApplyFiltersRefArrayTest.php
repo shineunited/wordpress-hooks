@@ -11,33 +11,32 @@
 
 declare(strict_types=1);
 
-namespace ShineUnited\WordPress\Hooks\Tests\HookManager;
+namespace ShineUnited\WordPress\Hooks\Tests\HookManager\Aliased;
 
 use ShineUnited\WordPress\Hooks\HookManager;
 use ShineUnited\WordPress\Hooks\UninitializedError;
 
 /**
- * Apply Filters Test
+ * Apply Filters Ref Array Test
  */
-class ApplyFiltersTest extends TestCase {
-	use Type\Filter;
+class ApplyFiltersRefArrayTest extends TestCase {
 
 	/**
 	 * @return void
 	 */
 	public function testPassthru(): void {
-		$mock = $this->mockGlobalFunction('apply_filters');
+		$mock = $this->mockGlobalFunction('apply_filters_ref_array');
 
 		$mock
 			->expects($this->once())
-			->method('apply_filters')
+			->method('apply_filters_ref_array')
 			->with(
 				$this->identicalTo('test-filter'),
-				$this->identicalTo('test-value')
+				$this->identicalTo(['test-value'])
 			)
 		;
 
-		HookManager::applyFilters('test-filter', 'test-value');
+		HookManager::applyFiltersRefArray('test-filter', ['test-value']);
 	}
 
 	/**
@@ -45,6 +44,6 @@ class ApplyFiltersTest extends TestCase {
 	 */
 	public function testUninitialized(): void {
 		$this->expectException(UninitializedError::class);
-		HookManager::applyFilters('test-filter', 'test-value');
+		HookManager::applyFiltersRefArray('test-filter', ['test-value']);
 	}
 }

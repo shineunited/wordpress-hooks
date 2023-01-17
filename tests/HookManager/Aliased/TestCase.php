@@ -11,13 +11,13 @@
 
 declare(strict_types=1);
 
-namespace ShineUnited\WordPress\Hooks\Tests\HookManager;
+namespace ShineUnited\WordPress\Hooks\Tests\HookManager\Aliased;
 
-use ShineUnited\WordPress\Hooks\HookManager;
+use ShineUnited\WordPress\Hooks\Tests\HookManager\TestCase as BaseTestCase;
 
 /**
- * Has Filter Test
+ * Base Hook Manager Aliased Test Case
  */
-class HasFilterTest extends HasHookTestCase {
-	use Type\Filter;
+abstract class TestCase extends BaseTestCase {
+
 }

@@ -11,11 +11,13 @@
 
 declare(strict_types=1);
 
-namespace ShineUnited\WordPress\Hooks\Tests\HookManager;
+namespace ShineUnited\WordPress\Hooks\Tests\HookManager\Typed;
+
+use ShineUnited\WordPress\Hooks\Tests\Type;
 
 /**
- * Remove Filter Test
+ * Remove All Actions Test
  */
-class RemoveFilterTest extends RemoveHookTestCase {
-	use Type\Filter;
+class RemoveAllActionsTest extends RemoveAllHooksTestCase {
+	use Type\Action;
 }

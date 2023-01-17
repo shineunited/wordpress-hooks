@@ -21,15 +21,6 @@ use ShineUnited\WordPress\Hooks\Tests\TestCase as BaseTestCase;
 abstract class TestCase extends BaseTestCase {
 
 	/**
-	 * Get the hook type.
-	 *
-	 * @param boolean $initialCaps If true capitalize the type.
-	 *
-	 * @return string The hook type.
-	 */
-	abstract protected function getHookType(bool $initialCaps = false): string;
-
-	/**
 	 * Initializes the native WP_Hook system.
 	 *
 	 * @return void

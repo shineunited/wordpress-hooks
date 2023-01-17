@@ -11,21 +11,21 @@
 
 declare(strict_types=1);
 
-namespace ShineUnited\WordPress\Hooks\Tests\HookManager\Type;
+namespace ShineUnited\WordPress\Hooks\Tests\Type;
 
 /**
- * Filter Type Trait
+ * Action Type Trait
  */
-trait Filter {
+trait Action {
 
 	/**
 	 * {@inheritdoc}
 	 */
-	protected function getHookType(bool $initialCaps = false): string {
+	public function getHookType(bool $initialCaps = false): string {
 		if ($initialCaps) {
-			return 'Filter';
+			return 'Action';
 		} else {
-			return 'filter';
+			return 'action';
 		}
 	}
 }
