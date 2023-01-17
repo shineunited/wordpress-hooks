@@ -2,15 +2,42 @@ name: Build Docs
 on:
     workflow_dispatch
 
+# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
+permissions:
+    contents: read
+    pages: write
+    id-token: write
+
+# Allow one concurrent deployment
+concurrency:
+    group: "pages"
+    cancel-in-progress: true
+
 jobs:
-    phpdoc:
+    deploy:
+        environment:
+            name: github-pages
+            url: ${{ steps.deploment.outputs.page_url }}
         runs-on: ubuntu-latest
         steps:
             - name: Checkout Code
               uses: actions/checkout@v3
-            - name: Update Wiki
-              uses: impresscms-dev/phpdocs-wiki-update-action@v2.2.5
+            - name: Setup PHP
+              uses: shivammathur/setup-php@v2
               with:
-                  engine: clean/phpdoc-md
-                  class_root_namespace: ShineUnited\WordPress\Hooks
-                  include: ShineUnited\WordPress\Hooks\*
+                  php-version: "8.0"
+            - name: Setup Pages
+              uses: actions/configure-pages@v2
+            - name: Install phpDoc
+              run: |
+                  curl --silent --location "https://phpdoc.org/phpDocumentor.phar" > "phpDocumentor.phar"
+                  chmod a+x "phpDocumentor.phar"
+            - name: Generate Docs
+              run: php "phpDocumentor.phar" --directory="." --target=".phpdoc/build" --cache=".phpdoc/cache"
+            - name: Upload Artifact
+              uses: actions/upload-pages-artifact@v1
+              with:
+                  path: ".phpdoc/build"
+            - name: Deploy to GitHub Pages
+              id: deployment
+              uses: actions/deploy-pages@v1
