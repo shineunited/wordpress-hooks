@@ -17,6 +17,7 @@
 				<extension>php</extension>
 			</extensions>
 			<visibility>public</visibility>
+			<default-package-name>WordPressHooks</default-package-name>
 		</api>
 	</version>
 </phpdocumentor>
